@@ -1,0 +1,935 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Feeding Frenzy: Misi Ejaan Sihat</title>
+    <!-- Google Fonts: Lexend untuk mesra disleksia & kanak-kanak -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #0077b6;
+            --primary-dark: #023e8a;
+            --accent: #ffb703;
+            --accent-orange: #fb8500;
+            --bg-light: #e0f1f7;
+            --card-bg: #ffffff;
+            --text-dark: #1d3557;
+            --correct-green: #2a9d8f;
+            --wrong-red: #e63946;
+            --font-family: 'Lexend', sans-serif;
+        }
+
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+            margin: 0;
+            padding: 0;
+        }
+
+        body, html {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            font-family: var(--font-family);
+            background-color: #001219;
+            color: var(--text-dark);
+        }
+
+        #game-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+
+        /* UI Overlays */
+        .overlay-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: rgba(0, 24, 48, 0.75);
+            backdrop-filter: blur(8px);
+            padding: 20px;
+            text-align: center;
+            color: white;
+            transition: opacity 0.3s ease;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        /* HUD Bar */
+        #hud-bar {
+            position: absolute;
+            top: 15px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 5;
+            display: flex;
+            gap: 15px;
+            background: rgba(255, 255, 255, 0.92);
+            padding: 10px 24px;
+            border-radius: 50px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.25);
+            border: 3px solid #90e0ef;
+            align-items: center;
+            width: 90%;
+            max-width: 800px;
+            justify-content: space-between;
+        }
+
+        .hud-item {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--text-dark);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .progress-container {
+            flex-grow: 1;
+            max-width: 200px;
+            background: #caf0f8;
+            height: 18px;
+            border-radius: 10px;
+            overflow: hidden;
+            border: 2px solid #0077b6;
+            position: relative;
+        }
+
+        .progress-bar {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #ffb703, #fb8500);
+            transition: width 0.3s ease;
+        }
+
+        /* Buttons */
+        .btn-primary {
+            background: linear-gradient(180deg, #ffb703 0%, #fb8500 100%);
+            color: #000;
+            font-family: var(--font-family);
+            font-size: 1.4rem;
+            font-weight: 800;
+            padding: 14px 36px;
+            border: 4px solid #fff;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 6px 0px #b55e00, 0 10px 20px rgba(0,0,0,0.3);
+            transition: all 0.1s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-top: 15px;
+        }
+
+        .btn-primary:active {
+            transform: translateY(4px);
+            box-shadow: 0 2px 0px #b55e00, 0 5px 10px rgba(0,0,0,0.3);
+        }
+
+        .btn-secondary {
+            background: #caf0f8;
+            color: var(--primary-dark);
+            font-family: var(--font-family);
+            font-size: 1.1rem;
+            font-weight: 700;
+            padding: 10px 20px;
+            border: 2px solid var(--primary);
+            border-radius: 25px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin: 5px;
+        }
+
+        .btn-secondary:hover {
+            background: #90e0ef;
+        }
+
+        /* Title Box */
+        .title-box {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 30px 40px;
+            border-radius: 30px;
+            border: 6px solid #90e0ef;
+            box-shadow: 0 15px 30px rgba(0,0,0,0.4);
+            max-width: 650px;
+            width: 90%;
+            color: var(--text-dark);
+        }
+
+        h1 {
+            font-size: 2.4rem;
+            color: var(--primary-dark);
+            margin-bottom: 8px;
+            font-weight: 800;
+        }
+
+        h2 {
+            font-size: 1.8rem;
+            color: var(--primary);
+            margin-bottom: 15px;
+        }
+
+        p.subtitle {
+            font-size: 1.2rem;
+            color: #457b9d;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+
+        /* Map Grid */
+        .map-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 15px;
+            width: 100%;
+            max-width: 850px;
+            margin: 20px 0;
+        }
+
+        .mission-card {
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 20px;
+            padding: 20px;
+            color: var(--text-dark);
+            text-align: left;
+            border: 4px solid #caf0f8;
+            position: relative;
+            transition: all 0.2s ease;
+        }
+
+        .mission-card.active {
+            border-color: var(--accent);
+            box-shadow: 0 8px 25px rgba(255, 183, 3, 0.4);
+            background: #ffffff;
+        }
+
+        .mission-card.locked {
+            opacity: 0.6;
+            background: #e0e0e0;
+            border-color: #b0b0b0;
+        }
+
+        .mission-card.completed {
+            border-color: var(--correct-green);
+            background: #f0fdf4;
+        }
+
+        .mission-badge {
+            font-size: 1.5rem;
+            position: absolute;
+            top: 15px;
+            right: 15px;
+        }
+
+        .mission-title {
+            font-weight: 800;
+            font-size: 1.1rem;
+            color: var(--primary-dark);
+            margin-bottom: 8px;
+        }
+
+        .mission-desc {
+            font-size: 0.9rem;
+            color: #4a5568;
+            line-height: 1.3;
+        }
+
+        /* Quiz Box */
+        .quiz-card {
+            background: #ffffff;
+            border-radius: 25px;
+            padding: 25px 30px;
+            width: 90%;
+            max-width: 750px;
+            color: var(--text-dark);
+            box-shadow: 0 15px 35px rgba(0,0,0,0.5);
+            border: 5px solid #90e0ef;
+            text-align: left;
+        }
+
+        .quiz-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .question-text {
+            font-size: 1.3rem;
+            font-weight: 700;
+            margin-bottom: 20px;
+            color: var(--primary-dark);
+            line-height: 1.4;
+        }
+
+        .options-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .option-btn {
+            background: #f8f9fa;
+            border: 3px solid #dee2e6;
+            border-radius: 15px;
+            padding: 14px 20px;
+            font-family: var(--font-family);
+            font-size: 1.12rem;
+            font-weight: 600;
+            text-align: left;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            color: var(--text-dark);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .option-btn:hover {
+            border-color: var(--primary);
+            background: #edf2f4;
+        }
+
+        .option-btn.selected {
+            border-color: var(--primary);
+            background: #e0f1f7;
+        }
+
+        /* Word Boxes for Reordering */
+        .word-pool, .answer-zone {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            min-height: 60px;
+            padding: 10px;
+            border-radius: 15px;
+            margin-bottom: 15px;
+        }
+
+        .word-pool {
+            background: #e2e8f0;
+            border: 2px dashed #cbd5e1;
+        }
+
+        .answer-zone {
+            background: #e0f1f7;
+            border: 3px solid var(--primary);
+        }
+
+        .word-box {
+            background: #ffffff;
+            border: 2px solid var(--primary-dark);
+            border-radius: 10px;
+            padding: 8px 14px;
+            font-weight: 700;
+            font-size: 1.1rem;
+            cursor: pointer;
+            box-shadow: 0 3px 0px rgba(0,0,0,0.15);
+            transition: transform 0.1s;
+        }
+
+        .word-box:active {
+            transform: scale(0.95);
+        }
+
+        /* Inputs */
+        .input-box {
+            width: 100%;
+            padding: 14px;
+            font-size: 1.2rem;
+            font-family: var(--font-family);
+            border: 3px solid var(--primary);
+            border-radius: 12px;
+            margin-bottom: 15px;
+            outline: none;
+        }
+
+        .feedback-msg {
+            font-size: 1.15rem;
+            font-weight: 700;
+            padding: 10px 15px;
+            border-radius: 12px;
+            margin-top: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .feedback-msg.correct {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .feedback-msg.wrong {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        /* TTS Audio Buttons */
+        .speech-btn {
+            background: #fef08a;
+            border: 2px solid #ca8a04;
+            color: #713f12;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-weight: 700;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.9rem;
+        }
+
+        /* Banner Messages */
+        .game-banner {
+            position: absolute;
+            top: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 6;
+            background: rgba(0,0,0,0.8);
+            color: #fff;
+            padding: 10px 24px;
+            border-radius: 30px;
+            font-weight: 700;
+            font-size: 1.2rem;
+            border: 2px solid var(--accent);
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        /* Badge/Star Animation */
+        .star-pop {
+            animation: popIn 0.5s ease-out;
+        }
+
+        @keyframes popIn {
+            0% { transform: scale(0.5); opacity: 0; }
+            80% { transform: scale(1.2); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <!-- Canvas background & interactive gameplay -->
+    <canvas id="gameCanvas"></canvas>
+
+    <!-- Temporary Game Banner Feedback -->
+    <div id="game-banner" class="game-banner">Awas! Terkena bom. Cuba lagi!</div>
+
+    <!-- HUD Status Bar -->
+    <div id="hud-bar" class="hidden">
+        <div class="hud-item">
+            <span>⭐</span> <span id="star-count">0</span>
+        </div>
+        <div class="hud-item">
+            <span>🏆 Tahap:</span> <span id="level-display">1</span>
+        </div>
+        <div class="hud-item" style="flex-grow: 1; justify-content: center;">
+            <span style="font-size: 0.9rem; margin-right: 5px;">🐟 Misi:</span>
+            <div class="progress-container">
+                <div id="fish-progress-bar" class="progress-bar"></div>
+            </div>
+            <span id="fish-count" style="font-size: 0.9rem; margin-left: 8px;">0/3</span>
+        </div>
+        <button class="speech-btn" onclick="toggleMuteSound()">
+            <span id="mute-icon">🔊</span>
+        </button>
+    </div>
+
+    <!-- 1. HALAMAN PEMBUKAAN -->
+    <div id="screen-welcome" class="overlay-screen">
+        <div class="title-box">
+            <div style="font-size: 3.5rem; margin-bottom: 10px;">🌊🐠</div>
+            <h1>FEEDING FRENZY</h1>
+            <h2>MISI EJAAN SIHAT</h2>
+            <p class="subtitle">“Jom makan, belajar dan jadi JUARA EJAAN!”</p>
+            <p style="font-size: 1rem; color: #64748b; margin-bottom: 20px;">
+                Kawal ikan kamu, makan ikan kecil dan selesaikan setiap misi untuk membuka tahap seterusnya!
+            </p>
+            <button class="btn-primary" onclick="showMapScreen()">▶ MULA MISI</button>
+        </div>
+    </div>
+
+    <!-- 2. PETA MISI -->
+    <div id="screen-map" class="overlay-screen hidden">
+        <div class="title-box" style="max-width: 850px;">
+            <h1>🌊 MISI KITA HARI INI!</h1>
+            <p class="subtitle" style="margin-bottom: 10px;">Pilih misi yang telah dibuka:</p>
+
+            <div class="map-grid">
+                <!-- Misi 1 -->
+                <div id="card-m1" class="mission-card active" onclick="startMission(1)">
+                    <span id="badge-m1" class="mission-badge">⭐</span>
+                    <div class="mission-title">🟡 MISI 1: KENALI PERKATAAN</div>
+                    <div class="mission-desc">Kenali perkataan berkaitan pemakanan dan kesihatan.</div>
+                </div>
+
+                <!-- Misi 2 -->
+                <div id="card-m2" class="mission-card locked" onclick="startMission(2)">
+                    <span id="badge-m2" class="mission-badge">🔒</span>
+                    <div class="mission-title">🔵 MISI 2: PERHATIKAN EJAAN</div>
+                    <div class="mission-desc">Bezakan ejaan yang betul dan ejaan yang salah.</div>
+                </div>
+
+                <!-- Misi 3 -->
+                <div id="card-m3" class="mission-card locked" onclick="startMission(3)">
+                    <span id="badge-m3" class="mission-badge">🔒</span>
+                    <div class="mission-title">🟣 MISI 3: BETULKAN EJAAN</div>
+                    <div class="mission-desc">Jadi Detektif Ejaan dan betulkan kesalahan dalam ayat.</div>
+                </div>
+
+                <!-- Misi 4 -->
+                <div id="card-m4" class="mission-card locked" onclick="startMission(4)">
+                    <span id="badge-m4" class="mission-badge">🔒</span>
+                    <div class="mission-title">🟠 MISI 4: BINA AYAT</div>
+                    <div class="mission-desc">Gunakan perkataan yang dipelajari untuk membina ayat.</div>
+                </div>
+            </div>
+
+            <button id="map-start-btn" class="btn-primary" onclick="launchCurrentMission()">MULA BERMAIN 🐟</button>
+        </div>
+    </div>
+
+    <!-- 3. INTERACTIVE QUIZ OVERLAY -->
+    <div id="screen-quiz" class="overlay-screen hidden">
+        <div class="quiz-card">
+            <div class="quiz-header">
+                <span id="quiz-level-tag" style="font-size: 0.95rem; font-weight: 800; color: var(--primary); background: #e0f1f7; padding: 4px 12px; border-radius: 12px;">
+                    TAHAP 1: KENALI EJAAN
+                </span>
+                <button class="speech-btn" onclick="speakCurrentQuestion()">
+                    🔊 Dengar Soalan
+                </button>
+            </div>
+
+            <div id="quiz-instruction" class="question-text">
+                Pilih ejaan yang betul bagi perkataan di bawah:
+            </div>
+
+            <!-- Content dynamic area -->
+            <div id="quiz-dynamic-body">
+                <!-- MCQ Options / Word Reorder / Text Input -->
+            </div>
+
+            <div id="quiz-feedback" class="feedback-msg hidden"></div>
+
+            <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 15px;">
+                <button id="btn-submit-quiz" class="btn-primary" style="font-size: 1.1rem; padding: 10px 25px;" onclick="checkAnswer()">
+                    🔍 Semak Jawapan
+                </button>
+                <button id="btn-next-quiz" class="btn-primary hidden" style="font-size: 1.1rem; padding: 10px 25px;" onclick="nextQuestion()">
+                    Seterusnya ➔
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 4. TAMAT PERMAINAN / VICTORY -->
+    <div id="screen-victory" class="overlay-screen hidden">
+        <div class="title-box">
+            <div style="font-size: 4rem; margin-bottom: 10px;" class="star-pop">🎉🏆🎉</div>
+            <h1>TAHNIAH! JUARA EJAAN!</h1>
+            <p class="subtitle">Kamu berjaya menyelesaikan <strong>MISI EJAAN SIHAT!</strong></p>
+            
+            <div style="font-size: 2.5rem; margin: 15px 0;">⭐⭐⭐⭐⭐</div>
+
+            <div style="background: #e0f1f7; padding: 15px; border-radius: 15px; margin-bottom: 20px; font-weight: 600; color: var(--primary-dark);">
+                “Hebat! Kamu telah berjaya mengenal pasti ejaan, membetulkan kesalahan dan melengkapkan ayat Bahasa Melayu.”
+            </div>
+
+            <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 10px;">
+                <button class="btn-primary" onclick="restartEntireGame()">🔄 MAIN SEMULA</button>
+                <button class="btn-secondary" onclick="showMapScreen()">🗺️ LIHAT MISI</button>
+                <button class="btn-secondary" onclick="speakVictory()">🔊 DENGAR SEMULA</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+/* ==========================================================================
+   QUESTION BANK (Easy to Edit & Maintain)
+   ========================================================================== */
+const questionBank = {
+    1: [ // TAHAP 1
+        {
+            id: "t1_q1",
+            type: "mcq",
+            instruction: "Pilih ejaan yang betul:",
+            options: ["1. Buahan", "2. Buah-buah", "3. Buah-buahan"],
+            correctIndex: 2,
+            audioText: "Pilih ejaan yang betul: Buah-buahan."
+        },
+        {
+            id: "t1_q2",
+            type: "mcq",
+            instruction: "Betulkan ejaan yang salah dalam ayat berikut:\n'Ali suka makan makanan yang maneh.'",
+            options: ["1. Manis", "2. Minum", "3. Manes"],
+            correctIndex: 0,
+            audioText: "Betulkan ejaan yang salah dalam ayat: Ali suka makan makanan yang maneh."
+        },
+        {
+            id: "t1_q3",
+            type: "mcq",
+            instruction: "Apakah kesalahan ejaan pada ayat berikut:\n'Kita perlu makan makanan berpandukan piramid makanan.'",
+            options: ["1. Piramid", "2. Berpandukan", "3. Tiada kesalahan ejaan"],
+            correctIndex: 2,
+            audioText: "Apakah kesalahan ejaan pada ayat: Kita perlu makan makanan berpandukan piramid makanan."
+        }
+    ],
+    2: [ // TAHAP 2
+        {
+            id: "t2_q1",
+            type: "reorder",
+            instruction: "Tulis dan susun perkataan di bawah supaya menjadi satu ayat yang betul.",
+            // 8 Perkataan termasuk dua 'makanan'
+            words: ["makanan", "Ali", "basi", "telah", "keracunan", "makan", "kerana", "makanan"],
+            correctAnswer: "Ali telah keracunan makanan kerana makan makanan basi.",
+            audioText: "Tulis dan susun perkataan di bawah supaya menjadi satu ayat yang betul."
+        },
+        {
+            id: "t2_q2",
+            type: "reorder",
+            instruction: "Tulis dan susun perkataan di bawah supaya menjadi satu ayat yang betul.",
+            words: ["buah-buahan", "Saffa", "membasuh", "sebelum", "makan", "segar"],
+            correctAnswer: "Saffa membasuh buah-buahan segar sebelum makan.",
+            audioText: "Tulis dan susun perkataan di bawah supaya menjadi satu ayat yang betul."
+        }
+    ],
+    3: [ // TAHAP 3
+        {
+            id: "t3_q1",
+            type: "input",
+            instruction: "Lengkapkan ayat di bawah supaya menjadi ayat yang lengkap:\n\nAli tidak ______ makan sayur.",
+            validAnswers: ["suka", "gemar"],
+            audioText: "Lengkapkan ayat: Ali tidak tempat kosong makan sayur."
+        },
+        {
+            id: "t3_q2",
+            type: "input",
+            instruction: "Lengkapkan ayat di bawah supaya menjadi ayat yang lengkap:\n\nSayur-______ bagus untuk kesihatan.",
+            validAnswers: ["sayuran"],
+            audioText: "Lengkapkan ayat: Sayur tempat kosong bagus untuk kesihatan."
+        },
+        {
+            id: "t3_q3",
+            type: "input",
+            instruction: "Lengkapkan ayat di bawah supaya menjadi ayat yang lengkap:\n\nJangan makan makanan yang telah _____.",
+            validAnswers: ["basi", "rosak", "busuk"],
+            audioText: "Lengkapkan ayat: Jangan makan makanan yang telah tempat kosong."
+        }
+    ]
+};
+
+/* ==========================================================================
+   GAME STATE & VARIABLES
+   ========================================================================== */
+let gameState = {
+    stars: 0,
+    currentLevel: 1,
+    unlockedLevel: 1,
+    fishEaten: 0,
+    targetFish: 3,
+    currentQuestionIndex: 0,
+    isPlayingArcade: false,
+    audioMuted: false,
+    selectedOption: null,
+    userOrderedWords: []
+};
+
+// Canvas Setup
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+
+function resizeCanvas() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+}
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+
+/* ==========================================================================
+   AUDIO SYNTHESIS & TTS (Web Speech API)
+   ========================================================================== */
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+function playSound(type) {
+    if (gameState.audioMuted) return;
+    if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+    }
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+
+    if (type === 'eat') {
+        // "TING!" Sound
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(880, audioCtx.currentTime); // A5
+        osc.frequency.exponentialRampToValueAtTime(1760, audioCtx.currentTime + 0.15);
+        gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.15);
+    } else if (type === 'bomb') {
+        // "TETTTTT!" Sound
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(150, audioCtx.currentTime);
+        osc.frequency.linearRampToValueAtTime(80, audioCtx.currentTime + 0.4);
+        gain.gain.setValueAtTime(0.4, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.4);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.4);
+    }
+}
+
+function speakText(text) {
+    if (gameState.audioMuted || !('speechSynthesis' in window)) return;
+    window.speechSynthesis.cancel(); // Stop ongoing speech
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = 'ms-MY'; // Bahasa Melayu Standard
+    utterance.rate = 0.8; // Speed 0.8x (mesra murid)
+    utterance.pitch = 1.0;
+    window.speechSynthesis.speak(utterance);
+}
+
+function toggleMuteSound() {
+    gameState.audioMuted = !gameState.audioMuted;
+    document.getElementById('mute-icon').innerText = gameState.audioMuted ? '🔇' : '🔊';
+    if (gameState.audioMuted) {
+        window.speechSynthesis.cancel();
+    }
+}
+
+/* ==========================================================================
+   FEEDING FRENZY ARCADE ENGINE
+   ========================================================================== */
+let mousePos = { x: canvas.width / 2, y: canvas.height / 2 };
+canvas.addEventListener('mousemove', (e) => {
+    mousePos.x = e.clientX;
+    mousePos.y = e.clientY;
+});
+canvas.addEventListener('touchmove', (e) => {
+    if (e.touches.length > 0) {
+        mousePos.x = e.touches[0].clientX;
+        mousePos.y = e.touches[0].clientY;
+    }
+});
+
+class PlayerFish {
+    constructor() {
+        this.x = canvas.width / 2;
+        this.y = canvas.height / 2;
+        this.baseRadius = 26;
+        this.radius = this.baseRadius;
+        this.color = '#ffb703';
+        this.eyeColor = '#1d3557';
+    }
+
+    update() {
+        // Smoothly follow mouse/touch
+        this.x += (mousePos.x - this.x) * 0.08;
+        this.y += (mousePos.y - this.y) * 0.08;
+        this.radius = this.baseRadius + (gameState.fishEaten * 4);
+    }
+
+    draw() {
+        ctx.save();
+        ctx.translate(this.x, this.y);
+        const flip = mousePos.x < this.x ? -1 : 1;
+        ctx.scale(flip, 1);
+
+        // Fish Body
+        ctx.beginPath();
+        ctx.ellipse(0, 0, this.radius * 1.3, this.radius, 0, 0, Math.PI * 2);
+        ctx.fillStyle = this.color;
+        ctx.fill();
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = '#fb8500';
+        ctx.stroke();
+
+        // Tail Fin
+        ctx.beginPath();
+        ctx.moveTo(-this.radius * 1.1, 0);
+        ctx.lineTo(-this.radius * 1.8, -this.radius * 0.7);
+        ctx.lineTo(-this.radius * 1.8, this.radius * 0.7);
+        ctx.closePath();
+        ctx.fillStyle = '#fb8500';
+        ctx.fill();
+
+        // Eye
+        ctx.beginPath();
+        ctx.arc(this.radius * 0.5, -this.radius * 0.3, this.radius * 0.25, 0, Math.PI * 2);
+        ctx.fillStyle = '#ffffff';
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(this.radius * 0.6, -this.radius * 0.3, this.radius * 0.12, 0, Math.PI * 2);
+        ctx.fillStyle = this.eyeColor;
+        ctx.fill();
+
+        ctx.restore();
+    }
+}
+
+class SmallFish {
+    constructor(speedMult) {
+        this.reset(speedMult);
+    }
+
+    reset(speedMult = 1) {
+        this.radius = 12 + Math.random() * 6;
+        this.speed = (1.5 + Math.random() * 2) * speedMult;
+        this.direction = Math.random() < 0.5 ? 1 : -1;
+        this.x = this.direction === 1 ? -30 : canvas.width + 30;
+        this.y = Math.random() * (canvas.height - 150) + 80;
+        this.color = ['#90e0ef', '#2a9d8f', '#e76f51', '#f4a261'][Math.floor(Math.random() * 4)];
+    }
+
+    update() {
+        this.x += this.speed * this.direction;
+        if (this.direction === 1 && this.x > canvas.width + 40) this.reset();
+        if (this.direction === -1 && this.x < -40) this.reset();
+    }
+
+    draw() {
+        ctx.save();
+        ctx.translate(this.x, this.y);
+        ctx.scale(this.direction, 1);
+
+        ctx.beginPath();
+        ctx.ellipse(0, 0, this.radius * 1.2, this.radius * 0.8, 0, 0, Math.PI * 2);
+        ctx.fillStyle = this.color;
+        ctx.fill();
+
+        // Tail
+        ctx.beginPath();
+        ctx.moveTo(-this.radius, 0);
+        ctx.lineTo(-this.radius * 1.6, -this.radius * 0.5);
+        ctx.lineTo(-this.radius * 1.6, this.radius * 0.5);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.restore();
+    }
+}
+
+class Bomb {
+    constructor(speedMult) {
+        this.reset(speedMult);
+    }
+
+    reset(speedMult = 1) {
+        this.radius = 18;
+        this.x = Math.random() * (canvas.width - 100) + 50;
+        this.y = -30;
+        this.speed = (1.2 + Math.random() * 1.5) * speedMult;
+    }
+
+    update() {
+        this.y += this.speed;
+        if (this.y > canvas.height + 40) this.reset();
+    }
+
+    draw() {
+        ctx.save();
+        ctx.translate(this.x, this.y);
+
+        // Bomb body
+        ctx.beginPath();
+        ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
+        ctx.fillStyle = '#2b2b2b';
+        ctx.fill();
+
+        // Fuse
+        ctx.beginPath();
+        ctx.moveTo(0, -this.radius);
+        ctx.lineTo(5, -this.radius - 8);
+        ctx.strokeStyle = '#d4a373';
+        ctx.lineWidth = 3;
+        ctx.stroke();
+
+        // Sparkle
+        ctx.beginPath();
+        ctx.arc(6, -this.radius - 10, 4, 0, Math.PI * 2);
+        ctx.fillStyle = '#e63946';
+        ctx.fill();
+
+        ctx.restore();
+    }
+}
+
+// Environment Background Elements
+const player = new PlayerFish();
+let smallFishes = [];
+let bombs = [];
+let bubbles = Array.from({ length: 25 }, () => ({
+    x: Math.random() * window.innerWidth,
+    y: Math.random() * window.innerHeight,
+    r: Math.random() * 6 + 2,
+    s: Math.random() * 1 + 0.5
+}));
+
+function initArcadeObjects() {
+    const level = gameState.currentLevel;
+    const speedMult = level === 1 ? 1 : level === 2 ? 1.4 : 1.8;
+    smallFishes = Array.from({ length: 5 }, () => new SmallFish(speedMult));
+    
+    const bombCount = level === 1 ? 1 : level === 2 ? 2 : 3;
+    bombs = Array.from({ length: bombCount }, () => new Bomb(speedMult));
+}
+
+function showBanner(msg) {
+    const banner = document.getElementById('game-banner');
+    banner.innerText = msg;
+    banner.style.opacity = '1';
+    setTimeout(() => { banner.style.opacity = '0'; }, 2000);
+}
+
+function updateArcade() {
+    if (!gameState.isPlayingArcade) return;
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Draw Ocean Background Gradient
+    const grad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+    grad.addColorStop(0, '#0077b6');
+    grad.addColorStop(1, '#001219');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Draw Floating Bubbles
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.25)';
+    bubbles.forEach(b => {
